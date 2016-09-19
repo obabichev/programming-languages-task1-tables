@@ -1,28 +1,43 @@
+"""
+
+This script counts fields in csv (excel style) file.
+There is support of external python functions.
+
+Babichev Oleg (194 group)
+19.09.2016
+
+"""
+
 import csv
 import os
 import re
 from math import *
 import sys
 
+
+def get_module_name(path_to_file):
+    path_parts = path_to_file.split(os.path.sep)
+    return path_parts[-1][:-3]
+
+
 if len(sys.argv) == 4:
-    path_parts = sys.argv[3].split(os.path.sep)
     sys.path.append(os.path.dirname(os.path.abspath(sys.argv[3])))
-    exec("from " + path_parts[-1][:-3] + " import *")
+    exec("from " + get_module_name(sys.argv[3]) + " import *")
 
 
 def main(argv):
-    pathFrom, pathTo = parseArgs(argv)
-    with open(pathFrom, 'r') as file:
-        data = list(csv.reader(file, delimiter=','))
+    path_from, path_to = parse_args(argv)
+    with open(path_from, 'r') as fileFrom:
+        data = list(csv.reader(fileFrom, delimiter=','))
 
     process(data)
 
-    with open(pathTo, 'w') as file:
-        writer = csv.writer(file)
+    with open(path_to, 'w') as fileTo:
+        writer = csv.writer(fileTo)
         writer.writerows(data)
 
 
-def parseArgs(argv):
+def parse_args(argv):
     from_ = argv[1]
     to_ = argv[2]
 
@@ -32,14 +47,14 @@ def parseArgs(argv):
 def process(data):
     for i, _ in enumerate(data):
         for j, item in enumerate(data[i]):
-            data[i][j] = processItem(item, data)
+            data[i][j] = process_item(item, data)
 
     return data
 
 
-def processItem(item, data):
+def process_item(item, data):
     if item.startswith('='):
-        item = replaceLinksByValues(item, data)
+        item = replace_links_by_values(item, data)
         try:
             return eval(item[1:])
         except NameError:
@@ -48,24 +63,22 @@ def processItem(item, data):
         return item
 
 
-def replaceLinksByValues(item, data):
-    print("before:", item)
-    for link in findLinksInItem(item):
-        replacingValue = countLink(link, data)
-        if type(replacingValue) == str:
-            item = item.replace(link, '"' + replacingValue + '"')
+def replace_links_by_values(item, data):
+    for link in find_links_in_item(item):
+        replacing_value = count_link(link, data)
+        if isinstance(replacing_value, str):
+            item = item.replace(link, '"' + replacing_value + '"')
         else:
-            item = item.replace(link, str(replacingValue))
-    print("after:", item)
+            item = item.replace(link, str(replacing_value))
     return item
 
 
-def findLinksInItem(item):
-    return set(re.findall('[A-Z]\d+', item))
+def find_links_in_item(item):
+    return set(re.findall(r'[A-Z]\d+', item))
 
 
-def countLink(link, data):
-    value = data[int(link[1:]) - 1][letterToPosition(link[0])]
+def count_link(link, data):
+    value = data[int(link[1:]) - 1][letter_to_position(link[0])]
 
     try:
         return int(value)
@@ -80,18 +93,17 @@ def countLink(link, data):
     return value
 
 
-def letterToPosition(letter):
+def letter_to_position(letter):
     return "ABCDEFGHIKLMNOPQRSTVXYZ".index(letter)
 
 
-def showUsageMessage():
+def show_usage_message():
     print("Usage: main.py <from> <to> [<script file>]")
 
 
 if __name__ == "__main__":
-    args = sys.argv
 
-    if len(args) < 3:
-        showUsageMessage()
+    if len(sys.argv) < 3:
+        show_usage_message()
     else:
         main(sys.argv)
